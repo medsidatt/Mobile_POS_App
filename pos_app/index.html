@@ -78,7 +78,9 @@
   .chips.sub .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
 
   .grid{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:12px 12px 120px}
-  .prod{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;min-height:180px;text-align:left}
+  .prod{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;min-height:180px;text-align:left;position:relative}
+  .prod .edit{position:absolute;top:6px;right:6px;z-index:2;background:#fff;border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:13px;color:var(--muted);line-height:1.3}
+  .prod .edit:active{background:var(--teal-l);color:var(--teal)}
   .prod:active{transform:scale(.98)}
   .prod .thumb{height:96px;border-radius:10px;overflow:hidden;background:#fff;border:1px solid var(--line);margin-bottom:8px;display:flex;align-items:center;justify-content:center}
   .prod .thumb img{width:100%;height:100%;object-fit:contain}
@@ -334,7 +336,7 @@
 <!-- add product modal -->
 <div class="modal hidden" id="addModal">
   <div class="mbox apmodal">
-    <h3>Add product</h3>
+    <h3 id="apTitle">Add product</h3>
     <div id="apPrev" class="apprev">No image</div>
     <label>Photo (take one or choose)</label>
     <input id="apFile" type="file" accept="image/*" capture="environment">
@@ -347,8 +349,9 @@
       <div style="flex:1"><label>Sale price (MRU)</label><input id="apSale" type="number" step="0.01" inputmode="decimal" placeholder="0.00"></div>
       <div style="flex:1"><label>Purchase price (MRU)</label><input id="apBuy" type="number" step="0.01" inputmode="decimal" placeholder="0.00"></div>
     </div>
-    <label>Starting stock</label><input id="apStock" type="number" inputmode="numeric" value="0">
+    <label id="apStockLbl">Starting stock</label><input id="apStock" type="number" inputmode="numeric" value="0">
     <button class="checkout" id="apSave" style="background:var(--teal)">Save product</button>
+    <button class="btn sec hidden" id="apDelete" style="color:var(--danger);border-color:var(--danger)">Remove from catalog</button>
     <button class="btn sec" onclick="$('addModal').classList.add('hidden')">Cancel</button>
   </div>
 </div>
@@ -475,7 +478,7 @@ $("stCreate").onclick=async()=>{
 async function loadData(){
   $("grid").innerHTML='<div class="empty"><div class="spin"></div>Loading…</div>';
   const [{data:prods,error:e1},{data:inv},{data:cust},{data:vend}]=await Promise.all([
-    sb.from("posinv_products").select("sku,name,category,subcategory,sales_price,purchase_price,image_url").eq("store_id",STORE.id).eq("active",true).order("name"),
+    sb.from("posinv_products").select("sku,name,category,subcategory,sales_price,purchase_price,image_url,opening_stock").eq("store_id",STORE.id).eq("active",true).order("name"),
     sb.from("posinv_inventory").select("sku,on_hand").eq("store_id",STORE.id),
     sb.from("posinv_customers").select("name").eq("store_id",STORE.id).order("name"),
     sb.from("posinv_vendors").select("name").eq("store_id",STORE.id).order("name")
@@ -533,11 +536,13 @@ function renderGrid(){
     const st=STOCK[p.sku]; let cls="in",txt=(st==null?"":st+" in stock");
     if(st!=null&&st<=0){cls="out";txt="Out of stock";} else if(st!=null&&st<=LOW){cls="low";}
     return `<button class="prod" data-sku="${p.sku}">
+      <span class="edit" data-esku="${p.sku}" title="Edit product">✎</span>
       <div class="thumb"><img src="${imgFor(p)}" loading="lazy" alt="" onerror="this.onerror=null;this.src='${tileFor(p.category)}'"></div>
       <div class="nm">${p.name}</div><div class="cat">${p.subcategory||p.category||""}</div>
       <div class="row"><span class="pr">${money(unitOf(p))}</span><span class="stk ${cls}">${txt}</span></div></button>`;
   }).join("");
   $("grid").querySelectorAll(".prod").forEach(b=>b.onclick=()=>addToCart(b.dataset.sku));
+  $("grid").querySelectorAll(".edit").forEach(s=>s.onclick=(e)=>{ e.stopPropagation(); openEditProduct(s.dataset.esku); });
 }
 
 // ---------- cart ----------
@@ -742,10 +747,15 @@ async function onScan(code){
   openAddProduct(prefill);
 }
 
-// ---------- add product (saves to catalog) ----------
-let addImgUrl="", addImgFile=null;
+// ---------- add / edit product ----------
+let addImgUrl="", addImgFile=null, editSku=null;
 function openAddProduct(pf){
   pf=pf||{sku:"",name:"",image_url:""};
+  editSku=null;
+  $("apTitle").textContent="Add product";
+  $("apStockLbl").textContent="Starting stock";
+  $("apSave").textContent="Save product";
+  $("apDelete").classList.add("hidden");
   $("apSku").value=pf.sku||""; $("apSku").readOnly=!!pf.sku;
   $("apName").value=pf.name||""; $("apSub").value="";
   $("apSale").value=""; $("apBuy").value=""; $("apStock").value="0";
@@ -763,6 +773,34 @@ function renderAddPreview(){
   $("apPrev").style.backgroundImage=src?`url("${src}")`:"none";
   $("apPrev").textContent=src?"":"No image";
 }
+function openEditProduct(sku){
+  const p=PRODUCTS.find(x=>String(x.sku)===String(sku)); if(!p) return;
+  editSku=p.sku;
+  $("apTitle").textContent="Edit product";
+  $("apStockLbl").textContent="Stock on hand";
+  $("apSave").textContent="Save changes";
+  $("apDelete").classList.remove("hidden");
+  $("apSku").value=p.sku; $("apSku").readOnly=true;
+  $("apName").value=p.name||""; $("apSub").value=p.subcategory||"";
+  $("apSale").value=p.sales_price!=null?p.sales_price:"";
+  $("apBuy").value=p.purchase_price!=null?p.purchase_price:"";
+  $("apStock").value=(STOCK[p.sku]!=null?STOCK[p.sku]:(p.opening_stock||0));
+  addImgUrl=p.image_url||""; addImgFile=null; $("apFile").value="";
+  const cats=Array.from(new Set(PRODUCTS.map(x=>x.category).filter(Boolean))).sort();
+  $("catList").innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join("");
+  $("apCat").value=p.category||"";
+  renderAddPreview();
+  $("addModal").classList.remove("hidden");
+}
+$("apDelete").onclick=async()=>{
+  if(!editSku) return;
+  const p=PRODUCTS.find(x=>x.sku===editSku);
+  if(!confirm(`Remove "${p?p.name:editSku}" from your catalog?\nPast sales keep their history.`)) return;
+  const {error}=await sb.from("posinv_products").update({active:false}).eq("store_id",STORE.id).eq("sku",editSku);
+  if(error){ alert(error.message); return; }
+  $("addModal").classList.add("hidden");
+  await loadData();
+};
 async function saveProduct(){
   const sku=$("apSku").value.trim(), name=$("apName").value.trim();
   if(!sku||!name){ alert("Barcode and product name are required."); return; }
@@ -781,13 +819,27 @@ async function saveProduct(){
         image_url=sb.storage.from("product-images").getPublicUrl(path).data.publicUrl;
       }catch(ue){ alert("Saved without the photo — to enable photo uploads run 06_products_and_storage.sql.\n("+(ue.message||ue)+")"); }
     }
-    const {error}=await sb.from("posinv_products").insert({
-      sku,name,category:cat,subcategory:sub,sales_price:sale,purchase_price:buy,opening_stock:stock,image_url,store_id:STORE.id
-    });
-    if(error) throw error;
-    $("addModal").classList.add("hidden");
-    await loadData();
-    addToCart(sku); openCart();
+    if(editSku){
+      // stock is derived (opening + purchases − sales), so setting a new
+      // on-hand value means shifting opening_stock by the difference
+      const upd={name,category:cat,subcategory:sub,sales_price:sale,purchase_price:buy,image_url};
+      const p=PRODUCTS.find(x=>x.sku===editSku);
+      const cur=STOCK[editSku];
+      if(cur!=null&&p&&p.opening_stock!=null) upd.opening_stock=Number(p.opening_stock)+(stock-cur);
+      else upd.opening_stock=stock;
+      const {error}=await sb.from("posinv_products").update(upd).eq("store_id",STORE.id).eq("sku",editSku);
+      if(error) throw error;
+      $("addModal").classList.add("hidden");
+      await loadData();
+    }else{
+      const {error}=await sb.from("posinv_products").insert({
+        sku,name,category:cat,subcategory:sub,sales_price:sale,purchase_price:buy,opening_stock:stock,image_url,store_id:STORE.id
+      });
+      if(error) throw error;
+      $("addModal").classList.add("hidden");
+      await loadData();
+      addToCart(sku); openCart();
+    }
   }catch(err){ alert("Could not save product: "+(err.message||err)); }
   finally{ $("apSave").disabled=false; $("apSave").textContent="Save product"; }
 }
