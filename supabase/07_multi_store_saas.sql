@@ -6,7 +6,7 @@
 --   • admin panel lists stores + toggles subscriptions
 --   • Excel sync becomes per-store via a secret report token
 --  Run AFTER 01–06 in the Supabase SQL Editor. Safe to re-run.
---  Platform admin email: cheikh.ahmed@amc4consulting.com
+--  Platform admin email: mohamedaloueimin@gmail.com
 -- ============================================================
 
 -- ---------- 1) STORES ----------
@@ -29,7 +29,7 @@ alter table posinv_app_users add column if not exists is_admin boolean not null 
 
 -- ---------- 3) Demo Store for the existing catalog ----------
 insert into posinv_stores (name, owner_email, active)
-select 'Demo Store', 'cheikh.ahmed@amc4consulting.com', true
+select 'Demo Store', 'mohamedaloueimin@gmail.com', true
 where not exists (select 1 from posinv_stores where name = 'Demo Store');
 
 -- ---------- 4) store_id on every data table + backfill ----------
@@ -81,7 +81,7 @@ begin
   insert into public.posinv_app_users (id, name, role)
   values (new.id, coalesce(new.raw_user_meta_data->>'name', new.email), 'Staff')
   on conflict (id) do nothing;
-  if lower(new.email) = 'cheikh.ahmed@amc4consulting.com' then
+  if lower(new.email) = 'mohamedaloueimin@gmail.com' then
     select id into demo from posinv_stores where name = 'Demo Store' limit 1;
     update posinv_app_users set is_admin = true, store_id = coalesce(store_id, demo) where id = new.id;
     update posinv_stores set owner_id = new.id where id = demo and owner_id is null;
@@ -94,7 +94,7 @@ do $$
 declare uid uuid; demo uuid;
 begin
   select id into demo from posinv_stores where name = 'Demo Store' limit 1;
-  select id into uid from auth.users where lower(email) = 'cheikh.ahmed@amc4consulting.com' limit 1;
+  select id into uid from auth.users where lower(email) = 'mohamedaloueimin@gmail.com' limit 1;
   if uid is not null then
     update posinv_app_users set is_admin = true, store_id = coalesce(store_id, demo) where id = uid;
     update posinv_stores set owner_id = coalesce(owner_id, uid) where id = demo;
