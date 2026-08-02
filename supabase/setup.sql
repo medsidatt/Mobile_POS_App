@@ -1,9 +1,9 @@
 -- ============================================================
---  SETUP_NEW_PROJECT.sql — ALL-IN-ONE for a FRESH Supabase project
---  Run this ONE file in the SQL Editor and you are done.
---  It combines: 01_schema + 04_add_images + 06_products_and_storage
---  + 07_multi_store_saas.  NO demo data (no products, no customers,
---  no vendors/suppliers) — every store starts with an empty catalog.
+--  setup.sql — the ONLY script you need, for a FRESH Supabase project
+--  Run this whole file once in the SQL Editor and you are done.
+--  Creates: POS schema, per-store isolation (RLS), subscriptions,
+--  photo storage, per-store Excel feed. NO demo data — every store
+--  starts with an empty catalog.
 --  Admin: mohamedaloueimin@gmail.com (auto-promoted at signup).
 -- ============================================================
 

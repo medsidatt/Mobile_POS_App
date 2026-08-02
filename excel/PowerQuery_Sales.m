@@ -13,8 +13,8 @@
 //  5. Refresh anytime with Data > Refresh All
 // ============================================================
 let
-    ProjectUrl  = "https://oshlhdiihxbquusrlswn.supabase.co",
-    AnonKey     = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zaGxoZGlpaHhicXV1c3Jsc3duIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2NTk3NjgsImV4cCI6MjEwMTIzNTc2OH0.ZkH8xURqCHRlTlKV8hN_Mm9VAMbdRU3atKxaBQk8ziY",
+    ProjectUrl  = "https://YOUR-PROJECT-ref.supabase.co",
+    AnonKey     = "YOUR-ANON-PUBLISHABLE-KEY",
     ReportToken = "PASTE-YOUR-STORE-REPORT-TOKEN-HERE",
 
     Response = Web.Contents(ProjectUrl & "/rest/v1/rpc/posinv_sales_report_x", [
