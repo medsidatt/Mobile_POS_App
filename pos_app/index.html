@@ -203,6 +203,17 @@
     <h2>Name your store</h2>
     <p class="sub">This name appears in the app header and on your receipts.</p>
     <label>Store name</label><input id="stName" placeholder="e.g. Boutique Nouakchott" />
+    <label>What does your store sell?</label>
+    <input id="stType" list="stTypeList" placeholder="e.g. Vehicle Keys &amp; Accessories" />
+    <datalist id="stTypeList">
+      <option value="Vehicle Keys & Accessories">
+      <option value="Grocery & Food">
+      <option value="Phone & Electronics">
+      <option value="Clothing & Fashion">
+      <option value="Pharmacy & Health">
+      <option value="Hardware & Tools">
+      <option value="General Store">
+    </datalist>
     <button class="btn" id="stCreate">Create my store</button>
     <div class="msg" id="stMsg"></div>
     <div class="toggle"><a href="#" onclick="doLogout(event)">Log out</a></div>
@@ -445,8 +456,14 @@ $("stCreate").onclick=async()=>{
   $("stCreate").disabled=true; $("stCreate").textContent="Creating…";
   try{
     const u=session.user;
-    const {data:st,error}=await sb.from("posinv_stores")
-      .insert({name, owner_id:u.id, owner_email:u.email}).select("id").single();
+    const ins={name, owner_id:u.id, owner_email:u.email};
+    const btype=$("stType").value.trim(); if(btype) ins.business_type=btype;
+    let {data:st,error}=await sb.from("posinv_stores").insert(ins).select("id").single();
+    if(error&&ins.business_type&&/business_type/.test(error.message||"")){
+      // DB doesn't have the column yet — save the store without it
+      delete ins.business_type;
+      ({data:st,error}=await sb.from("posinv_stores").insert(ins).select("id").single());
+    }
     if(error) throw error;
     const {error:e2}=await sb.from("posinv_app_users").update({store_id:st.id}).eq("id",u.id);
     if(e2) throw e2;
@@ -642,14 +659,14 @@ function showView(v){
 async function loadAdmin(){
   $("adminList").innerHTML='<div class="empty"><div class="spin"></div>Loading…</div>';
   const {data,error}=await sb.from("posinv_stores")
-    .select("id,name,owner_email,active,report_token,created_at")
+    .select("*")
     .order("created_at",{ascending:false});
   if(error){ $("adminList").innerHTML='<div class="empty">'+esc(error.message)+'</div>'; return; }
   if(!data.length){ $("adminList").innerHTML='<div class="empty">No stores yet.</div>'; return; }
   $("adminList").innerHTML=data.map(s=>`<div class="listcard">
     <div class="top"><b>${esc(s.name)}</b>
       <span class="badge ${s.active?'b-Paid':'b-Void'}">${s.active?'ACTIVE':'DISABLED'}</span></div>
-    <div class="meta">${esc(s.owner_email||"no owner email")} · joined ${new Date(s.created_at).toLocaleDateString()}</div>
+    <div class="meta">${esc(s.business_type||"—")} · ${esc(s.owner_email||"no owner email")} · joined ${new Date(s.created_at).toLocaleDateString()}</div>
     <div class="meta" style="word-break:break-all">Excel token: ${s.report_token}</div>
     <div class="acts">${s.active
       ?`<button class="act-void" onclick="toggleStore('${s.id}',false)">Disable subscription</button>`

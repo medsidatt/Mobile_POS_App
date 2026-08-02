@@ -17,8 +17,10 @@ create table if not exists posinv_stores (
   owner_email  text,
   active       boolean default false,
   report_token uuid not null default gen_random_uuid(),
+  business_type text,
   created_at   timestamptz default now()
 );
+alter table posinv_stores add column if not exists business_type text;
 alter table posinv_stores enable row level security;
 
 -- ---------- 2) PROFILE: store link + admin flag ----------
