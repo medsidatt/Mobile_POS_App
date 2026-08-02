@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<meta name="theme-color" content="#0e7c7b" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/favicon.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<title>Mobile POS with Inventory</title>
+<style>
+  :root{
+    --teal:#0e7c7b; --teal-d:#0a5a59; --teal-l:#e6f2f2;
+    --ink:#12303a; --muted:#6b8189; --line:#dbe6e6; --bg:#f4f7f7;
+    --ok:#1f9d55; --warn:#e07b1a; --danger:#d84545; --white:#fff;
+    --purchase:#3d5a80;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--ink);overscroll-behavior:none}
+  button{font-family:inherit;cursor:pointer;border:0}
+  input,select{font-family:inherit}
+  .hidden{display:none !important}
+
+  /* LOGIN */
+  #login,.gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+         background:linear-gradient(160deg,var(--teal),var(--teal-d));padding:24px;z-index:30}
+  .card{background:#fff;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.25);width:100%;max-width:390px;padding:30px 26px}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .brand img{width:52px;height:52px;border-radius:12px}
+  .brand h1{font-size:20px;margin:0;line-height:1.1}
+  .brand span{color:var(--muted);font-size:13px}
+  .card h2{font-size:17px;margin:22px 0 4px}
+  .card p.sub{color:var(--muted);font-size:13px;margin:0 0 18px}
+  label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:12px 0 5px;text-transform:uppercase;letter-spacing:.04em}
+  input,select{width:100%;padding:13px 14px;font-size:16px;border:1.5px solid var(--line);border-radius:12px;background:#fbfdfd}
+  input:focus,select:focus{outline:none;border-color:var(--teal)}
+  .btn{width:100%;padding:14px;font-size:16px;font-weight:800;border-radius:12px;background:var(--teal);color:#fff;margin-top:18px}
+  .btn:active{background:var(--teal-d)}
+  .btn.sec{background:#fff;color:var(--teal);border:1.5px solid var(--teal);margin-top:10px}
+  .toggle{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
+  .toggle a{color:var(--teal);font-weight:700;text-decoration:none}
+  .msg{margin-top:14px;font-size:13px;padding:10px 12px;border-radius:10px;display:none}
+  .msg.err{display:block;background:#fdecec;color:var(--danger)}
+  .msg.ok{display:block;background:#e9f7ef;color:var(--ok)}
+
+  /* APP */
+  #app{display:flex;flex-direction:column;height:100%}
+  header{color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;gap:10px;
+         position:sticky;top:0;z-index:5;background:var(--teal);transition:background .2s}
+  body.purchase header{background:var(--purchase)}
+  header .store{font-weight:800;font-size:16px;line-height:1.15}
+  header .who{font-size:11px;opacity:.85}
+  header .sp{flex:1}
+  header button{background:rgba(255,255,255,.16);color:#fff;border-radius:9px;padding:8px 10px;font-size:12px;font-weight:700}
+
+  /* mode toggle */
+  .modebar{display:flex;gap:0;background:#fff;border-bottom:1px solid var(--line);padding:8px 12px;align-items:center;gap:10px}
+  .seg{display:flex;background:var(--teal-l);border-radius:10px;padding:3px;flex:1;max-width:230px}
+  .seg button{flex:1;padding:8px 6px;border-radius:8px;background:transparent;color:var(--teal);font-weight:800;font-size:13px}
+  .seg button.on{background:var(--teal);color:#fff}
+  body.purchase .seg button.on{background:var(--purchase)}
+  .party{flex:1}
+  .party select{padding:9px 10px;font-size:14px}
+
+  .tools{padding:8px 12px;background:#fff;border-bottom:1px solid var(--line)}
+  .searchrow{display:flex;gap:8px}
+  .searchrow input{flex:1;padding:11px 12px}
+  .scan{background:var(--teal);color:#fff;border-radius:12px;padding:0 14px;font-size:20px;min-width:52px}
+  body.purchase .scan{background:var(--purchase)}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:8px 12px 2px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{white-space:nowrap;background:#fff;border:1.5px solid var(--line);color:var(--ink);padding:7px 13px;border-radius:999px;font-size:13px;font-weight:700}
+  .chip.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+  body.purchase .chip.on{background:var(--purchase);border-color:var(--purchase)}
+  .chips.sub .chip{padding:6px 11px;font-size:12px;background:#f6fafa}
+  .chips.sub .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+
+  .grid{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:12px 12px 120px}
+  .prod{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;min-height:180px;text-align:left}
+  .prod:active{transform:scale(.98)}
+  .prod .thumb{height:96px;border-radius:10px;overflow:hidden;background:#fff;border:1px solid var(--line);margin-bottom:8px;display:flex;align-items:center;justify-content:center}
+  .prod .thumb img{width:100%;height:100%;object-fit:contain}
+  .prod .nm{font-weight:700;font-size:14px;line-height:1.2;flex:1}
+  .prod .cat{font-size:11px;color:var(--muted);margin-top:3px}
+  .prod .row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px}
+  .prod .pr{font-weight:800;color:var(--teal);font-size:16px}
+  body.purchase .prod .pr{color:var(--purchase)}
+  .prod .stk{font-size:11px;font-weight:700}
+  .stk.in{color:var(--ok)} .stk.low{color:var(--warn)} .stk.out{color:var(--danger)}
+  .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:50px 20px}
+
+  /* cart bar */
+  .cartbar{position:fixed;left:0;right:0;bottom:56px;background:var(--teal);color:#fff;padding:13px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 -6px 20px rgba(0,0,0,.15);z-index:6}
+  body.purchase .cartbar{background:var(--purchase)}
+  .cartbar .n{background:#fff;color:var(--teal);border-radius:999px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
+  .cartbar .lbl{flex:1;font-weight:700}
+  .cartbar .tot{font-weight:800;font-size:18px}
+
+  /* bottom nav */
+  .nav{position:fixed;left:0;right:0;bottom:0;height:calc(56px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);
+       background:#fff;border-top:1px solid var(--line);display:flex;z-index:7}
+  .nav button{flex:1;background:none;color:var(--muted);font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  .nav button .ic{font-size:18px}
+  .nav button.on{color:var(--teal)}
+
+  /* views */
+  .view{flex:1;overflow-y:auto;padding:12px 12px 130px}
+  .listcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .listcard .top{display:flex;justify-content:space-between;align-items:center}
+  .listcard b{font-size:15px}
+  .badge{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px}
+  .b-Paid{background:#e9f7ef;color:var(--ok)} .b-Open{background:#fef3e6;color:var(--warn)}
+  .b-Refund{background:#eef;color:#5661c9} .b-Void{background:#fdecec;color:var(--danger)}
+  .b-SALE{background:var(--teal-l);color:var(--teal)} .b-PURCHASE{background:#e7ecf5;color:var(--purchase)}
+  .listcard .meta{color:var(--muted);font-size:12px;margin-top:4px}
+  .listcard .acts{display:flex;gap:8px;margin-top:10px}
+  .listcard .acts button{flex:1;padding:9px;border-radius:9px;font-weight:700;font-size:13px}
+  .act-refund{background:#eef;color:#5661c9}.act-void{background:#fdecec;color:var(--danger)}
+  .vhead{font-size:20px;font-weight:800;margin:6px 4px 12px}
+
+  /* drawer / sheets */
+  .drawer{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:12;display:flex;align-items:flex-end}
+  .sheet{background:var(--bg);width:100%;max-height:90%;border-radius:20px 20px 0 0;display:flex;flex-direction:column}
+  .sheet h3{margin:0;padding:18px 18px 10px;font-size:18px;display:flex;justify-content:space-between;align-items:center}
+  .sheet h3 button{background:none;color:var(--muted);font-size:24px;line-height:1}
+  .items{overflow-y:auto;padding:0 16px;flex:1}
+  .ci{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px}
+  .ci .r1{display:flex;gap:10px;align-items:center}
+  .ci .cinm{flex:1}
+  .ci .cinm b{font-size:14px} .ci .cinm span{display:block;color:var(--muted);font-size:12px}
+  .qty{display:flex;align-items:center;gap:8px}
+  .qty button{width:32px;height:32px;border-radius:9px;background:var(--teal-l);color:var(--teal);font-size:18px;font-weight:800}
+  .qty b{min-width:20px;text-align:center}
+  .ci .lt{font-weight:800;min-width:64px;text-align:right}
+  .ci .r2{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--muted)}
+  .ci .r2 input{width:64px;padding:6px 8px;font-size:13px;text-align:right}
+  .totals{background:#fff;margin:0;padding:16px 18px;border-top:1px solid var(--line)}
+  .tl{display:flex;justify-content:space-between;font-size:14px;margin:5px 0;color:var(--muted)}
+  .tl.grand{font-size:20px;font-weight:800;color:var(--ink);margin-top:10px}
+  .checkout{width:100%;padding:16px;font-size:17px;font-weight:800;border-radius:14px;background:var(--ok);color:#fff;margin-top:12px}
+  .checkout:disabled{background:#a9c9b6}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;display:flex;align-items:center;justify-content:center;padding:20px}
+  .mbox{background:#fff;border-radius:18px;max-width:380px;width:100%;padding:22px}
+  .mbox h3{margin:0 0 14px;font-size:18px;text-align:center}
+  .tender label{margin-top:0}
+  .tender .big{font-size:26px;text-align:center;font-weight:800;padding:14px;border:2px solid var(--line);border-radius:12px}
+  .quick{display:flex;gap:8px;margin:12px 0}
+  .quick button{flex:1;padding:10px;border-radius:10px;background:var(--teal-l);color:var(--teal);font-weight:800}
+  .changeline{display:flex;justify-content:space-between;font-size:18px;font-weight:800;margin:10px 2px}
+
+  /* receipt */
+  #receipt .rc{font-family:"Courier New",monospace;font-size:13px}
+  #receipt .rc h4{text-align:center;margin:0 0 2px;font-size:16px}
+  #receipt .rc .c{text-align:center;color:var(--muted);font-size:12px}
+  #receipt .rc table{width:100%;border-collapse:collapse;margin:10px 0}
+  #receipt .rc td{padding:2px 0;vertical-align:top}
+  #receipt .rc .tr{text-align:right}
+  #receipt .rc hr{border:0;border-top:1px dashed #bbb;margin:8px 0}
+  #receipt .big{font-size:40px;text-align:center}
+
+  #addModal .mbox{max-height:92%;overflow-y:auto}
+  .apprev{height:120px;border-radius:12px;background:#f0f5f5 center/contain no-repeat;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;margin-bottom:2px}
+  #scanbox{background:#000;border-radius:14px;overflow:hidden}
+  #reader{width:100%}
+  .spin{width:34px;height:34px;border:4px solid var(--teal-l);border-top-color:var(--teal);border-radius:50%;animation:sp 1s linear infinite;margin:20px auto}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  @media print{
+    body *{visibility:hidden}
+    #receipt, #receipt *{visibility:visible}
+    #receipt{position:fixed;inset:0;background:#fff;display:block;padding:10px}
+    #receipt .mbox{box-shadow:none;max-width:none}
+    #receipt .noprint{display:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="card">
+    <div class="brand"><img src="icons/icon-192.png" alt="" />
+      <div><h1 id="brandName">Mobile POS</h1><span>with Inventory</span></div></div>
+    <h2 id="authTitle">Sign in</h2>
+    <p class="sub" id="authSub">Log in to start ringing up sales.</p>
+    <div id="nameField" class="hidden"><label>Your name</label><input id="fName" placeholder="e.g. Nancy Smith" autocomplete="name" /></div>
+    <label>Email</label><input id="fEmail" type="email" placeholder="you@store.com" autocomplete="username" />
+    <label>Password</label><input id="fPass" type="password" placeholder="••••••••" autocomplete="current-password" />
+    <button class="btn" id="authBtn">Sign in</button>
+    <div class="toggle" id="authToggle">New here? <a href="#">Create an account</a></div>
+    <div class="msg" id="authMsg"></div>
+  </div>
+</div>
+
+<!-- CREATE STORE (first login) -->
+<div id="setup" class="gate hidden">
+  <div class="card">
+    <div class="brand"><img src="icons/icon-192.png" alt="" />
+      <div><h1>Set up your store</h1><span>one last step</span></div></div>
+    <h2>Name your store</h2>
+    <p class="sub">This name appears in the app header and on your receipts.</p>
+    <label>Store name</label><input id="stName" placeholder="e.g. Boutique Nouakchott" />
+    <button class="btn" id="stCreate">Create my store</button>
+    <div class="msg" id="stMsg"></div>
+    <div class="toggle"><a href="#" onclick="doLogout(event)">Log out</a></div>
+  </div>
+</div>
+
+<!-- SUBSCRIPTION BLOCKED -->
+<div id="blocked" class="gate hidden">
+  <div class="card" style="text-align:center">
+    <div style="font-size:44px">⏳</div>
+    <h2>Subscription not active</h2>
+    <p class="sub">Your store “<b id="blockedStore"></b>” is awaiting activation.<br>
+      Contact your provider to activate your subscription.</p>
+    <button class="btn" onclick="startApp()">Check again</button>
+    <button class="btn sec" onclick="doLogout(event)">Log out</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <header>
+    <div><div class="store" id="storeName">Store</div><div class="who" id="whoName">—</div></div>
+    <div class="sp"></div>
+    <button id="logoutBtn">Log out</button>
+  </header>
+
+  <div class="modebar">
+    <div class="seg">
+      <button id="mSale" class="on" onclick="setMode('SALE')">SALE</button>
+      <button id="mBuy" onclick="setMode('PURCHASE')">PURCHASE</button>
+    </div>
+    <div class="party"><select id="party"><option value="">Walk-in customer</option></select></div>
+  </div>
+
+  <!-- POS VIEW -->
+  <div id="posView" style="display:flex;flex-direction:column;flex:1;min-height:0">
+    <div class="tools">
+      <div class="searchrow">
+        <input id="search" placeholder="Search or scan a product…" />
+        <button class="scan" id="scanBtn" title="Scan barcode">▣</button>
+        <button class="scan" id="addBtn" title="Add product" style="background:var(--ink)">＋</button>
+      </div>
+    </div>
+    <div class="chips" id="cats"></div>
+    <div class="chips sub" id="subs"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <!-- ORDERS VIEW -->
+  <div id="ordersView" class="view hidden">
+    <div class="vhead">Recent orders</div>
+    <div id="ordersList"></div>
+  </div>
+
+  <!-- LOW STOCK VIEW -->
+  <div id="stockView" class="view hidden">
+    <div class="vhead">Low stock</div>
+    <div id="stockList"></div>
+  </div>
+
+  <!-- ADMIN VIEW (platform owner only) -->
+  <div id="adminView" class="view hidden">
+    <div class="vhead">Stores &amp; subscriptions</div>
+    <div id="adminList"></div>
+  </div>
+
+  <div class="cartbar" id="cartbar" onclick="openCart()">
+    <div class="n" id="cartN">0</div>
+    <div class="lbl" id="cartLbl">View cart</div>
+    <div class="tot" id="cartTot">MRU 0.00</div>
+  </div>
+
+  <nav class="nav">
+    <button id="navPos" class="on" onclick="showView('pos')"><span class="ic">🛒</span>POS</button>
+    <button id="navOrders" onclick="showView('orders')"><span class="ic">🧾</span>Orders</button>
+    <button id="navStock" onclick="showView('stock')"><span class="ic">📦</span>Low stock</button>
+    <button id="navAdmin" class="hidden" onclick="showView('admin')"><span class="ic">🏪</span>Admin</button>
+  </nav>
+</div>
+
+<!-- cart drawer -->
+<div class="drawer hidden" id="drawer">
+  <div class="sheet">
+    <h3 id="cartTitle">Current sale <button onclick="closeCart()">×</button></h3>
+    <div class="items" id="cartItems"></div>
+    <div class="totals">
+      <div class="tl"><span>Subtotal</span><span id="tSub">MRU 0.00</span></div>
+      <div class="tl" id="discRow"><span>Discounts</span><span id="tDisc">MRU 0.00</span></div>
+      <div class="tl" id="taxRow"><span id="tTaxLbl">Tax</span><span id="tTax">MRU 0.00</span></div>
+      <div class="tl grand"><span>Total</span><span id="tGrand">MRU 0.00</span></div>
+      <button class="checkout" id="checkoutBtn">Charge MRU 0.00</button>
+    </div>
+  </div>
+</div>
+
+<!-- tender modal -->
+<div class="modal hidden" id="tenderModal">
+  <div class="mbox tender">
+    <h3>Amount tendered</h3>
+    <input class="big" id="tenderInput" type="number" inputmode="decimal" step="0.01" />
+    <div class="quick" id="quickCash"></div>
+    <div class="changeline"><span>Change</span><span id="changeDue">MRU 0.00</span></div>
+    <button class="checkout" id="confirmPay">Complete sale</button>
+    <button class="btn sec" onclick="closeTender()">Cancel</button>
+  </div>
+</div>
+
+<!-- receipt modal -->
+<div class="modal hidden" id="receipt">
+  <div class="mbox">
+    <div class="big">✅</div>
+    <div class="rc" id="rcBody"></div>
+    <button class="btn noprint" onclick="window.print()">🖨️ Print / Share</button>
+    <button class="btn sec noprint" onclick="closeReceipt()">New order</button>
+  </div>
+</div>
+
+<!-- add product modal -->
+<div class="modal hidden" id="addModal">
+  <div class="mbox apmodal">
+    <h3>Add product</h3>
+    <div id="apPrev" class="apprev">No image</div>
+    <label>Photo (take one or choose)</label>
+    <input id="apFile" type="file" accept="image/*" capture="environment">
+    <label>Barcode / SKU</label><input id="apSku" placeholder="Scanned code">
+    <label>Product name</label><input id="apName" placeholder="e.g. Remote key fob — Toyota">
+    <label>Category</label><input id="apCat" list="catList" placeholder="e.g. Car Keys, Drinks, Accessories…">
+    <datalist id="catList"></datalist>
+    <label>Subcategory (optional)</label><input id="apSub" placeholder="e.g. Toyota, Soda…">
+    <div style="display:flex;gap:10px">
+      <div style="flex:1"><label>Sale $</label><input id="apSale" type="number" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div style="flex:1"><label>Purchase $</label><input id="apBuy" type="number" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+    </div>
+    <label>Starting stock</label><input id="apStock" type="number" inputmode="numeric" value="0">
+    <button class="checkout" id="apSave" style="background:var(--teal)">Save product</button>
+    <button class="btn sec" onclick="$('addModal').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
+<!-- scan modal -->
+<div class="modal hidden" id="scanModal">
+  <div class="mbox"><h3>Scan a barcode</h3><div id="scanbox"><div id="reader"></div></div>
+    <button class="btn sec" onclick="stopScan()" style="margin-top:14px">Cancel</button></div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+const CFG = window.POS_CONFIG || {};
+const money = (n)=> (CFG.CURRENCY||"$") + (Math.round(n*100)/100).toFixed(2);
+const round2 = (n)=> Math.round(n*100)/100;
+const $ = (id)=>document.getElementById(id);
+const TAX = CFG.TAX_RATE || 0;
+const LOW = CFG.LOW_STOCK || 10;
+
+let sb, session=null, cashier="", mode="SALE";
+let STORE=null, IS_ADMIN=false;
+let PRODUCTS=[], STOCK={}, CUSTOMERS=[], VENDORS=[];
+const esc=(s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let activeCat="All", activeSub="All", cart=new Map(), curView="pos";
+
+const CAT_TILE = {
+  "Drinks & Beverages":"images/cat-drinks.svg","Breads & Cereals":"images/cat-breads.svg",
+  "Meats & Seafood":"images/cat-meats.svg","Dairy & Eggs":"images/cat-dairy.svg",
+  "Frozen Food":"images/cat-frozen.svg","Fruits & Vegetables":"images/cat-fruits.svg"
+};
+const tileFor=(c)=>CAT_TILE[c]||"images/cat-generic.svg";
+const imgFor=(p)=>(p.image_url&&String(p.image_url).trim())?p.image_url:tileFor(p.category);
+const unitOf=(p)=> mode==="SALE" ? Number(p.sales_price) : Number(p.purchase_price||0);
+
+// ---------- boot ----------
+(function boot(){
+  if(!CFG.SUPABASE_URL || CFG.SUPABASE_URL.includes("YOUR-PROJECT")){
+    authError("⚠️ Add your Supabase URL and anon key to config.js first."); return;
+  }
+  sb = supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+  $("brandName").textContent=CFG.STORE_NAME||"Mobile POS";
+  $("storeName").textContent=CFG.STORE_NAME||"Store";
+  $("tTaxLbl").textContent=(CFG.TAX_NAME||"Tax")+" ("+(TAX*100).toFixed(2).replace(/\.00$/,'')+"%)";
+  sb.auth.getSession().then(({data})=>{ if(data.session){ session=data.session; startApp(); }});
+})();
+
+// ---------- auth ----------
+let signup=false;
+$("authToggle").onclick=(e)=>{ e.preventDefault(); signup=!signup;
+  $("authTitle").textContent=signup?"Create account":"Sign in";
+  $("authSub").textContent=signup?"Create your account — you'll name your store next.":"Log in to start ringing up sales.";
+  $("authBtn").textContent=signup?"Create account":"Sign in";
+  $("nameField").classList.toggle("hidden",!signup);
+  $("authToggle").innerHTML=signup?'Have an account? <a href="#">Sign in</a>':'New here? <a href="#">Create an account</a>';
+  $("authToggle").querySelector("a").onclick=$("authToggle").onclick; clearMsg();
+};
+$("authBtn").onclick=async()=>{
+  const email=$("fEmail").value.trim(), pass=$("fPass").value, name=$("fName").value.trim();
+  if(!email||!pass) return authError("Enter your email and password.");
+  $("authBtn").disabled=true; $("authBtn").textContent="Please wait…";
+  try{
+    if(signup){
+      const {error}=await sb.auth.signUp({email,password:pass,options:{data:{name:name||email}}});
+      if(error) throw error;
+      const {data}=await sb.auth.getSession();
+      if(!data.session){ authOk("Account created! You can sign in now."); signup=false; $("authToggle").click(); }
+      else { session=data.session; startApp(); }
+    }else{
+      const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+      if(error) throw error; session=data.session; startApp();
+    }
+  }catch(err){ authError(err.message||"Login failed."); }
+  finally{ $("authBtn").disabled=false; $("authBtn").textContent=signup?"Create account":"Sign in"; }
+};
+function authError(m){$("authMsg").className="msg err";$("authMsg").textContent=m;}
+function authOk(m){$("authMsg").className="msg ok";$("authMsg").textContent=m;}
+function clearMsg(){$("authMsg").className="msg";$("authMsg").textContent="";}
+$("logoutBtn").onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
+async function doLogout(e){ if(e)e.preventDefault(); await sb.auth.signOut(); location.reload(); }
+
+// ---------- start (profile → store → subscription gate) ----------
+function showGate(id){ ["login","setup","blocked","app"].forEach(x=>$(x).classList.add("hidden")); $(id).classList.remove("hidden"); }
+async function startApp(){
+  const u=session.user; cashier=(u.user_metadata&&u.user_metadata.name)||u.email;
+  const {data:prof}=await sb.from("posinv_app_users").select("store_id,is_admin").eq("id",u.id).maybeSingle();
+  IS_ADMIN=!!(prof&&prof.is_admin);
+  if(!prof||!prof.store_id){ showGate("setup"); return; }
+  const {data:st}=await sb.from("posinv_stores").select("id,name,active").eq("id",prof.store_id).maybeSingle();
+  if(!st){ showGate("setup"); return; }
+  STORE=st;
+  if(!st.active&&!IS_ADMIN){ $("blockedStore").textContent=st.name; showGate("blocked"); return; }
+  showGate("app");
+  $("storeName").textContent=STORE.name;
+  $("whoName").textContent="Cashier: "+cashier;
+  $("navAdmin").classList.toggle("hidden",!IS_ADMIN);
+  await loadData();
+}
+
+// first login: create this user's store (starts disabled until admin activates)
+$("stCreate").onclick=async()=>{
+  const name=$("stName").value.trim();
+  if(!name){ $("stMsg").className="msg err"; $("stMsg").textContent="Enter a store name."; return; }
+  $("stCreate").disabled=true; $("stCreate").textContent="Creating…";
+  try{
+    const u=session.user;
+    const {data:st,error}=await sb.from("posinv_stores")
+      .insert({name, owner_id:u.id, owner_email:u.email}).select("id").single();
+    if(error) throw error;
+    const {error:e2}=await sb.from("posinv_app_users").update({store_id:st.id}).eq("id",u.id);
+    if(e2) throw e2;
+    await startApp();
+  }catch(err){ $("stMsg").className="msg err"; $("stMsg").textContent=err.message||"Could not create store."; }
+  finally{ $("stCreate").disabled=false; $("stCreate").textContent="Create my store"; }
+};
+
+async function loadData(){
+  $("grid").innerHTML='<div class="empty"><div class="spin"></div>Loading…</div>';
+  const [{data:prods,error:e1},{data:inv},{data:cust},{data:vend}]=await Promise.all([
+    sb.from("posinv_products").select("sku,name,category,subcategory,sales_price,purchase_price,image_url").eq("store_id",STORE.id).eq("active",true).order("name"),
+    sb.from("posinv_inventory").select("sku,on_hand").eq("store_id",STORE.id),
+    sb.from("posinv_customers").select("name").eq("store_id",STORE.id).order("name"),
+    sb.from("posinv_vendors").select("name").eq("store_id",STORE.id).order("name")
+  ]);
+  if(e1){ $("grid").innerHTML='<div class="empty">Could not load products.<br>'+e1.message+'</div>'; return; }
+  PRODUCTS=prods||[]; STOCK={}; (inv||[]).forEach(r=>STOCK[r.sku]=Number(r.on_hand));
+  CUSTOMERS=(cust||[]).map(c=>c.name); VENDORS=(vend||[]).map(v=>v.name);
+  fillParty(); buildCats(); renderGrid();
+}
+
+// ---------- mode & party ----------
+function setMode(m){
+  mode=m; cart.clear(); renderCartBar();
+  $("mSale").classList.toggle("on",m==="SALE"); $("mBuy").classList.toggle("on",m==="PURCHASE");
+  document.body.classList.toggle("purchase",m==="PURCHASE");
+  fillParty(); renderGrid();
+}
+function fillParty(){
+  const sel=$("party"); const list=mode==="SALE"?CUSTOMERS:VENDORS;
+  const ph=mode==="SALE"?"Walk-in customer":"Select vendor";
+  sel.innerHTML='<option value="">'+ph+'</option>'+list.map(n=>`<option>${n}</option>`).join("");
+}
+
+// ---------- categories / subcategories ----------
+function buildCats(){
+  const cats=["All",...Array.from(new Set(PRODUCTS.map(p=>p.category).filter(Boolean)))];
+  $("cats").innerHTML=cats.map(c=>`<button class="chip ${c===activeCat?'on':''}" data-c="${c}">${c}</button>`).join("");
+  $("cats").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ activeCat=b.dataset.c; activeSub="All"; buildCats(); buildSubs(); renderGrid(); });
+  buildSubs();
+}
+function buildSubs(){
+  if(activeCat==="All"){ $("subs").innerHTML=""; return; }
+  const subs=["All",...Array.from(new Set(PRODUCTS.filter(p=>p.category===activeCat).map(p=>p.subcategory).filter(Boolean)))];
+  if(subs.length<=1){ $("subs").innerHTML=""; return; }
+  $("subs").innerHTML=subs.map(s=>`<button class="chip ${s===activeSub?'on':''}" data-s="${s}">${s}</button>`).join("");
+  $("subs").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ activeSub=b.dataset.s; buildSubs(); renderGrid(); });
+}
+
+$("search").addEventListener("input",renderGrid);
+function renderGrid(){
+  const q=$("search").value.trim().toLowerCase();
+  let list=PRODUCTS.filter(p=>{
+    const okC=activeCat==="All"||p.category===activeCat;
+    const okS=activeSub==="All"||p.subcategory===activeSub;
+    const okQ=!q||p.name.toLowerCase().includes(q)||String(p.sku).toLowerCase().includes(q);
+    return okC&&okS&&okQ;
+  });
+  if(!list.length){
+    $("grid").innerHTML='<div class="empty">'+(PRODUCTS.length
+      ?'No products match.'
+      :'No products yet.<br><br>Tap <b>＋</b> to add your first product,<br>or scan a barcode — unknown items<br>open Add Product automatically.')+'</div>';
+    return;
+  }
+  $("grid").innerHTML=list.slice(0,300).map(p=>{
+    const st=STOCK[p.sku]; let cls="in",txt=(st==null?"":st+" in stock");
+    if(st!=null&&st<=0){cls="out";txt="Out of stock";} else if(st!=null&&st<=LOW){cls="low";}
+    return `<button class="prod" data-sku="${p.sku}">
+      <div class="thumb"><img src="${imgFor(p)}" loading="lazy" alt="" onerror="this.onerror=null;this.src='${tileFor(p.category)}'"></div>
+      <div class="nm">${p.name}</div><div class="cat">${p.subcategory||p.category||""}</div>
+      <div class="row"><span class="pr">${money(unitOf(p))}</span><span class="stk ${cls}">${txt}</span></div></button>`;
+  }).join("");
+  $("grid").querySelectorAll(".prod").forEach(b=>b.onclick=()=>addToCart(b.dataset.sku));
+}
+
+// ---------- cart ----------
+function addToCart(sku){
+  const p=PRODUCTS.find(x=>String(x.sku)===String(sku)); if(!p) return;
+  const e=cart.get(sku)||{p,qty:0,disc:0}; e.qty++; e.p=p; cart.set(sku,e);
+  if(navigator.vibrate)navigator.vibrate(15); renderCartBar();
+}
+function changeQty(sku,d){ const e=cart.get(sku); if(!e)return; e.qty+=d;
+  if(e.qty<=0)cart.delete(sku); else cart.set(sku,e); renderCartBar(); renderCartItems(); }
+function setDisc(sku,val){ const e=cart.get(sku); if(!e)return;
+  let d=parseFloat(val)||0; d=Math.max(0,Math.min(100,d)); e.disc=d/100; cart.set(sku,e); renderCartItems(); }
+function lineTotal(e){ return unitOf(e.p)*e.qty*(1-(e.disc||0)); }
+function cartTotals(){
+  let sub=0,disc=0;
+  cart.forEach(e=>{ const gross=unitOf(e.p)*e.qty; sub+=gross*(1-(e.disc||0)); disc+=gross*(e.disc||0); });
+  const tax=mode==="SALE"?sub*TAX:0; return {sub,disc,tax,grand:sub+tax};
+}
+function renderCartBar(){
+  let n=0; cart.forEach(e=>n+=e.qty); const {grand}=cartTotals();
+  $("cartN").textContent=n; $("cartTot").textContent=money(grand);
+  $("cartLbl").textContent=mode==="SALE"?"View sale":"View purchase";
+}
+function openCart(){ if(cart.size===0)return; renderCartItems(); $("drawer").classList.remove("hidden"); }
+function closeCart(){ $("drawer").classList.add("hidden"); }
+function renderCartItems(){
+  if(cart.size===0){ closeCart(); return; }
+  $("cartTitle").firstChild.textContent=(mode==="SALE"?"Current sale ":"Purchase / restock ");
+  let html="";
+  cart.forEach((e,sku)=>{ html+=`<div class="ci">
+    <div class="r1"><div class="cinm"><b>${e.p.name}</b><span>${money(unitOf(e.p))} each</span></div>
+      <div class="qty"><button onclick="changeQty('${sku}',-1)">−</button><b>${e.qty}</b><button onclick="changeQty('${sku}',1)">+</button></div>
+      <div class="lt">${money(lineTotal(e))}</div></div>
+    <div class="r2">Discount % <input type="number" min="0" max="100" value="${Math.round((e.disc||0)*100)}" onchange="setDisc('${sku}',this.value)"></div>
+  </div>`; });
+  $("cartItems").innerHTML=html;
+  const {sub,disc,tax,grand}=cartTotals();
+  $("tSub").textContent=money(sub); $("tDisc").textContent="−"+money(disc);
+  $("discRow").style.display=disc>0?"flex":"none";
+  $("taxRow").style.display=(mode==="SALE"&&TAX>0)?"flex":"none";
+  $("tTax").textContent=money(tax); $("tGrand").textContent=money(grand);
+  $("checkoutBtn").textContent=(mode==="SALE"?"Charge ":"Receive stock ")+money(grand);
+}
+$("checkoutBtn").onclick=()=>{ if(mode==="SALE") openTender(); else finalize(0); };
+
+// ---------- tender (SALE) ----------
+function openTender(){
+  const {grand}=cartTotals();
+  $("tenderInput").value=grand.toFixed(2);
+  const ups=[grand, Math.ceil(grand), Math.ceil(grand/5)*5, Math.ceil(grand/10)*10];
+  const uniq=[...new Set(ups.map(v=>v.toFixed(2)))];
+  $("quickCash").innerHTML=uniq.map(v=>`<button onclick="$('tenderInput').value='${v}';calcChange()">${money(+v)}</button>`).join("");
+  calcChange(); $("tenderModal").classList.remove("hidden");
+}
+function calcChange(){ const {grand}=cartTotals(); const paid=parseFloat($("tenderInput").value)||0;
+  $("changeDue").textContent=money(Math.max(0,paid-grand)); }
+$("tenderInput") && $("tenderInput").addEventListener("input",calcChange);
+function closeTender(){ $("tenderModal").classList.add("hidden"); }
+$("confirmPay").onclick=()=>{ const paid=parseFloat($("tenderInput").value)||0; closeTender(); finalize(paid); };
+
+// ---------- finalize order ----------
+async function finalize(tendered){
+  if(cart.size===0)return;
+  const {sub,tax,grand}=cartTotals();
+  $("checkoutBtn").disabled=true;
+  try{
+    const party=$("party").value || (mode==="SALE"?"Walk-in":"Supplier");
+    const {data:order,error:oe}=await sb.from("posinv_orders").insert({
+      type:mode, status:"Paid", party, user_name:cashier, total_paid:round2(grand), created_by:session.user.id, store_id:STORE.id
+    }).select("id,order_on").single();
+    if(oe) throw oe;
+    const items=[]; cart.forEach(e=>items.push({
+      order_id:order.id, type:mode, sku:e.p.sku, product_name:e.p.name,
+      qty:e.qty, amount:unitOf(e.p), disc_pct:e.disc||0, line_total:round2(lineTotal(e)), store_id:STORE.id
+    }));
+    const {error:ie}=await sb.from("posinv_order_items").insert(items); if(ie) throw ie;
+    showReceipt(order,items,{sub,tax,grand,tendered,party});
+    cart.clear(); renderCartBar(); closeCart(); loadData();
+  }catch(err){ alert("Failed: "+(err.message||err)); }
+  finally{ $("checkoutBtn").disabled=false; }
+}
+
+// ---------- receipt ----------
+function showReceipt(order,items,t){
+  const chg=Math.max(0,(t.tendered||0)-t.grand);
+  const rows=items.map(i=>`<tr><td>${i.qty}× ${i.product_name}${i.disc_pct>0?' ('+Math.round(i.disc_pct*100)+'% off)':''}</td><td class="tr">${money(i.line_total)}</td></tr>`).join("");
+  $("rcBody").innerHTML=`
+    <h4>${esc((STORE&&STORE.name)||CFG.STORE_NAME||"Store")}</h4>
+    <div class="c">${mode==="SALE"?"SALES RECEIPT":"PURCHASE ORDER"}</div>
+    <div class="c">Order #${order.id} · ${new Date(order.order_on).toLocaleString()}</div>
+    <div class="c">${mode==="SALE"?"Customer":"Vendor"}: ${t.party} · Cashier: ${cashier}</div>
+    <hr><table>${rows}</table><hr>
+    <table>
+      <tr><td>Subtotal</td><td class="tr">${money(t.sub)}</td></tr>
+      ${mode==="SALE"&&TAX>0?`<tr><td>${CFG.TAX_NAME||"Tax"}</td><td class="tr">${money(t.tax)}</td></tr>`:""}
+      <tr><td><b>Total</b></td><td class="tr"><b>${money(t.grand)}</b></td></tr>
+      ${mode==="SALE"&&t.tendered?`<tr><td>Tendered</td><td class="tr">${money(t.tendered)}</td></tr><tr><td>Change</td><td class="tr">${money(chg)}</td></tr>`:""}
+    </table><hr>
+    <div class="c">${CFG.FOOTER_MESSAGE||"Thank you!"}</div>`;
+  $("receipt").classList.remove("hidden");
+}
+function closeReceipt(){ $("receipt").classList.add("hidden"); }
+
+// ---------- views / nav ----------
+function showView(v){
+  curView=v;
+  $("posView").style.display=v==="pos"?"flex":"none";
+  $("ordersView").classList.toggle("hidden",v!=="orders");
+  $("stockView").classList.toggle("hidden",v!=="stock");
+  $("adminView").classList.toggle("hidden",v!=="admin");
+  $("cartbar").style.display=v==="pos"?"flex":"none";
+  ["Pos","Orders","Stock","Admin"].forEach(n=>$("nav"+n).classList.toggle("on",v===n.toLowerCase()));
+  if(v==="orders") loadOrders();
+  if(v==="stock") renderStock();
+  if(v==="admin") loadAdmin();
+}
+
+// ---------- admin: stores & subscriptions ----------
+async function loadAdmin(){
+  $("adminList").innerHTML='<div class="empty"><div class="spin"></div>Loading…</div>';
+  const {data,error}=await sb.from("posinv_stores")
+    .select("id,name,owner_email,active,report_token,created_at")
+    .order("created_at",{ascending:false});
+  if(error){ $("adminList").innerHTML='<div class="empty">'+esc(error.message)+'</div>'; return; }
+  if(!data.length){ $("adminList").innerHTML='<div class="empty">No stores yet.</div>'; return; }
+  $("adminList").innerHTML=data.map(s=>`<div class="listcard">
+    <div class="top"><b>${esc(s.name)}</b>
+      <span class="badge ${s.active?'b-Paid':'b-Void'}">${s.active?'ACTIVE':'DISABLED'}</span></div>
+    <div class="meta">${esc(s.owner_email||"no owner email")} · joined ${new Date(s.created_at).toLocaleDateString()}</div>
+    <div class="meta" style="word-break:break-all">Excel token: ${s.report_token}</div>
+    <div class="acts">${s.active
+      ?`<button class="act-void" onclick="toggleStore('${s.id}',false)">Disable subscription</button>`
+      :`<button style="background:#e9f7ef;color:var(--ok)" onclick="toggleStore('${s.id}',true)">Activate subscription</button>`}</div>
+  </div>`).join("");
+}
+async function toggleStore(id,to){
+  const {error}=await sb.from("posinv_stores").update({active:to}).eq("id",id);
+  if(error){ alert(error.message); return; }
+  loadAdmin();
+}
+
+// ---------- orders (refund / void) ----------
+async function loadOrders(){
+  $("ordersList").innerHTML='<div class="empty"><div class="spin"></div>Loading…</div>';
+  const {data,error}=await sb.from("posinv_orders").select("id,order_on,type,status,party,total_paid").eq("store_id",STORE.id).order("order_on",{ascending:false}).limit(40);
+  if(error){ $("ordersList").innerHTML='<div class="empty">'+error.message+'</div>'; return; }
+  if(!data.length){ $("ordersList").innerHTML='<div class="empty">No orders yet.</div>'; return; }
+  $("ordersList").innerHTML=data.map(o=>{
+    const canAct=o.status!=="Void"&&o.status!=="Refund";
+    return `<div class="listcard">
+      <div class="top"><b>#${o.id} · ${money(o.total_paid)}</b>
+        <span class="badge b-${o.status}">${o.status}</span></div>
+      <div class="meta"><span class="badge b-${o.type}">${o.type}</span> ${o.party||""} · ${new Date(o.order_on).toLocaleString()}</div>
+      ${canAct?`<div class="acts">
+        <button class="act-refund" onclick="setStatus(${o.id},'Refund')">Refund</button>
+        <button class="act-void" onclick="setStatus(${o.id},'Void')">Void</button></div>`:""}
+    </div>`;
+  }).join("");
+}
+async function setStatus(id,status){
+  if(!confirm(`Mark order #${id} as ${status}? This adjusts inventory.`))return;
+  const {error}=await sb.from("posinv_orders").update({status}).eq("id",id);
+  if(error){ alert(error.message); return; }
+  loadOrders(); loadData();
+}
+
+// ---------- low stock ----------
+function renderStock(){
+  const rows=PRODUCTS.map(p=>({p,st:STOCK[p.sku]})).filter(r=>r.st!=null&&r.st<=LOW).sort((a,b)=>a.st-b.st);
+  if(!rows.length){ $("stockList").innerHTML='<div class="empty">Nothing low. Stock looks healthy. 📦</div>'; return; }
+  $("stockList").innerHTML=rows.map(r=>`<div class="listcard">
+    <div class="top"><b>${r.p.name}</b><span class="badge ${r.st<=0?'b-Void':'b-Open'}">${r.st<=0?'OUT':r.st+' left'}</span></div>
+    <div class="meta">${r.p.category} · SKU ${r.p.sku}</div>
+    <div class="acts"><button class="act-refund" onclick="restock('${r.p.sku}')">Restock (Purchase)</button></div>
+  </div>`).join("");
+}
+function restock(sku){ if(mode!=="PURCHASE") setMode("PURCHASE"); addToCart(sku); showView('pos'); openCart(); }
+
+// ---------- barcode scan ----------
+let scanner=null;
+$("scanBtn").onclick=startScan;
+async function startScan(){
+  $("scanModal").classList.remove("hidden");
+  try{ scanner=new Html5Qrcode("reader");
+    await scanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:150}},(txt)=>onScan(txt),()=>{});
+  }catch(err){ stopScan(); alert("Camera unavailable: "+(err.message||err)+"\nType the SKU instead."); }
+}
+async function stopScan(){ try{ if(scanner){ await scanner.stop(); scanner.clear(); } }catch(e){} scanner=null; $("scanModal").classList.add("hidden"); }
+async function onScan(code){
+  code=String(code).trim();
+  const hit=PRODUCTS.find(p=>String(p.sku)===code); stopScan();
+  if(hit){ addToCart(hit.sku); openCart(); return; }
+  // Unknown barcode → open Add Product, pre-filling from Open Food Facts if recognized.
+  let prefill={sku:code,name:"",image_url:""};
+  if(code.length>=6){
+    try{
+      const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,image_front_small_url`);
+      const j=await r.json();
+      if(j&&j.status===1&&j.product){ prefill.name=j.product.product_name||""; prefill.image_url=j.product.image_front_small_url||""; }
+    }catch(e){}
+  }
+  openAddProduct(prefill);
+}
+
+// ---------- add product (saves to catalog) ----------
+let addImgUrl="", addImgFile=null;
+function openAddProduct(pf){
+  pf=pf||{sku:"",name:"",image_url:""};
+  $("apSku").value=pf.sku||""; $("apSku").readOnly=!!pf.sku;
+  $("apName").value=pf.name||""; $("apSub").value="";
+  $("apSale").value=""; $("apBuy").value=""; $("apStock").value="0";
+  addImgUrl=pf.image_url||""; addImgFile=null; $("apFile").value="";
+  // Category is free text — type anything (Car Keys, Phone Accessories…);
+  // the datalist just suggests categories this store already uses.
+  const cats=Array.from(new Set(PRODUCTS.map(p=>p.category).filter(Boolean))).sort();
+  $("catList").innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join("");
+  $("apCat").value="";
+  renderAddPreview();
+  $("addModal").classList.remove("hidden");
+}
+function renderAddPreview(){
+  const src=addImgFile?URL.createObjectURL(addImgFile):addImgUrl;
+  $("apPrev").style.backgroundImage=src?`url("${src}")`:"none";
+  $("apPrev").textContent=src?"":"No image";
+}
+async function saveProduct(){
+  const sku=$("apSku").value.trim(), name=$("apName").value.trim();
+  if(!sku||!name){ alert("Barcode and product name are required."); return; }
+  const cat=$("apCat").value, sub=$("apSub").value.trim();
+  const sale=parseFloat($("apSale").value)||0, buy=parseFloat($("apBuy").value)||0;
+  const stock=parseInt($("apStock").value)||0;
+  $("apSave").disabled=true; $("apSave").textContent="Saving…";
+  try{
+    let image_url=addImgUrl;
+    if(addImgFile){
+      try{
+        const ext=(addImgFile.name.split(".").pop()||"jpg").toLowerCase();
+        const path=`${sku}-${Date.now()}.${ext}`;
+        const {error:ue}=await sb.storage.from("product-images").upload(path,addImgFile,{upsert:true,contentType:addImgFile.type});
+        if(ue) throw ue;
+        image_url=sb.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+      }catch(ue){ alert("Saved without the photo — to enable photo uploads run 06_products_and_storage.sql.\n("+(ue.message||ue)+")"); }
+    }
+    const {error}=await sb.from("posinv_products").insert({
+      sku,name,category:cat,subcategory:sub,sales_price:sale,purchase_price:buy,opening_stock:stock,image_url,store_id:STORE.id
+    });
+    if(error) throw error;
+    $("addModal").classList.add("hidden");
+    await loadData();
+    addToCart(sku); openCart();
+  }catch(err){ alert("Could not save product: "+(err.message||err)); }
+  finally{ $("apSave").disabled=false; $("apSave").textContent="Save product"; }
+}
+
+$("addBtn").onclick=()=>openAddProduct({});
+$("apFile").addEventListener("change",(e)=>{ addImgFile=e.target.files[0]||null; if(addImgFile) addImgUrl=""; renderAddPreview(); });
+$("apSave").onclick=saveProduct;
+
+// ---------- service worker ----------
+if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+</script>
+</body>
+</html>

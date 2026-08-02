@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#0e7c7b"/><stop offset="1" stop-color="#0a5a59"/></linearGradient></defs>
+<rect width="200" height="200" fill="url(#g)"/>
+<rect y="150" width="200" height="50" fill="#e8d24a"/>
+<circle cx="100" cy="100" r="46" fill="#ffffff1f"/>
+<path d="M84 74 l32 0 l0 12 l8 12 l0 40 q0 6 -6 6 l-36 0 q-6 0 -6 -6 l0 -40 l8 -12 z" fill="#fff"/><rect x="88" y="104" width="24" height="18" rx="2" fill="#0e7c7b"/>
+<text x="100" y="182" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">Dairy</text>
+</svg>

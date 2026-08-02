@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#0e7c7b"/><stop offset="1" stop-color="#0a5a59"/></linearGradient></defs>
+<rect width="200" height="200" fill="url(#g)"/>
+<rect y="150" width="200" height="50" fill="#c98a3a"/>
+<circle cx="100" cy="100" r="46" fill="#ffffff1f"/>
+<path d="M60 108 q0 -30 40 -30 q40 0 40 30 l0 24 q0 8 -8 8 l-64 0 q-8 0 -8 -8 z" fill="#fff"/><path d="M76 92 q4 20 0 40 M100 88 q4 22 0 44 M124 92 q4 20 0 40" stroke="#0e7c7b" stroke-width="3" fill="none"/>
+<text x="100" y="182" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">Bakery</text>
+</svg>

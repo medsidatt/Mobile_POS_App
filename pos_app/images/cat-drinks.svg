@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#0e7c7b"/><stop offset="1" stop-color="#0a5a59"/></linearGradient></defs>
+<rect width="200" height="200" fill="url(#g)"/>
+<rect y="150" width="200" height="50" fill="#f6a821"/>
+<circle cx="100" cy="100" r="46" fill="#ffffff1f"/>
+<rect x="82" y="70" width="36" height="70" rx="5" fill="#fff"/><rect x="82" y="70" width="36" height="14" fill="#ffffffcc"/><line x1="112" y1="52" x2="104" y2="74" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+<text x="100" y="182" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">Drinks</text>
+</svg>
