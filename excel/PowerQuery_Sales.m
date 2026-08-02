@@ -15,7 +15,7 @@
 let
     ProjectUrl  = "https://aldcssgsgzmtfjrfkies.supabase.co",
     AnonKey     = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsZGNzc2dzZ3ptdGZqcmZraWVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2Nzc4MjAsImV4cCI6MjEwMTI1MzgyMH0.OY9GSbQv1A_WP-1GExDeNuWTuOQ5c-uRWiK3AxvT_Ws",
-    ReportToken = "PASTE-YOUR-STORE-REPORT-TOKEN-HERE",
+    ReportToken = "4ee1715b-d436-4310-9d9f-da76e4278282",  // Demo Store
 
     Response = Web.Contents(ProjectUrl & "/rest/v1/rpc/posinv_sales_report_x", [
         Query   = [ token = ReportToken ],
