@@ -1,7 +1,7 @@
 {
-  "name": "Mobile POS with Inventory",
+  "name": "POS & Inventory",
   "short_name": "POS",
-  "description": "Ring up sales on your phone. Reports flow to Excel.",
+  "description": "Run sales and inventory from a computer, tablet, or phone.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
