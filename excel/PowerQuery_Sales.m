@@ -13,8 +13,8 @@
 //  5. Refresh anytime with Data > Refresh All
 // ============================================================
 let
-    ProjectUrl  = "https://odimxwlmzxdmomtwzozq.supabase.co",
-    AnonKey     = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kaW14d2xtenhkbW9tdHd6b3pxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MDY3MTgsImV4cCI6MjEwMTE4MjcxOH0.5uSkEPGuVRAgJv7FzhNH8vWKN6Lrg2Eq_rS7ppL3zYA",
+    ProjectUrl  = "https://oshlhdiihxbquusrlswn.supabase.co",
+    AnonKey     = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zaGxoZGlpaHhicXV1c3Jsc3duIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2NTk3NjgsImV4cCI6MjEwMTIzNTc2OH0.ZkH8xURqCHRlTlKV8hN_Mm9VAMbdRU3atKxaBQk8ziY",
     ReportToken = "PASTE-YOUR-STORE-REPORT-TOKEN-HERE",
 
     Response = Web.Contents(ProjectUrl & "/rest/v1/rpc/posinv_sales_report_x", [
